@@ -1051,16 +1051,19 @@ elif st.session_state.step == 3:
             st.session_state.form = {}
             st.rerun()
     with br2:
-        # Botão imprimir/PDF com JavaScript (igual ao HTML original)
-        st.markdown("""
-        <button onclick="window.print()"
+        # Botão imprimir — usa components.v1.html para executar JS real
+        import streamlit.components.v1 as components
+        components.html("""
+        <button onclick="window.parent.window.print()"
             style="width:100%;padding:11px 26px;background:#f59e0b;color:#08101e;
-                   border:none;border-radius:8px;font-family:'Sora',sans-serif;
+                   border:none;border-radius:8px;
+                   font-family:'Sora',sans-serif;
                    font-size:14px;font-weight:600;cursor:pointer;
-                   display:flex;align-items:center;justify-content:center;gap:8px;">
-            🖨️ Imprimir / Salvar PDF
+                   display:flex;align-items:center;justify-content:center;gap:8px;
+                   transition:background .2s;">
+            🖨️&nbsp; Imprimir / Salvar PDF
         </button>
-        """, unsafe_allow_html=True)
+        """, height=50)
 
 # ═══════════════════════════════════════════════════════════════
 # FOOTER
