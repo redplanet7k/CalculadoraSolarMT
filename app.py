@@ -673,12 +673,22 @@ elif st.session_state.step == 3:
             line=dict(color="rgba(255,255,255,0.15)", dash="dash", width=1),
             showlegend=False,
         ))
-        # Payback marker
+        # Payback marker — add_shape evita erro com eixo categórico
         pb_year = round(payback)
         if 1 <= pb_year <= LIFE:
-            fig1.add_vline(x=f"Ano {pb_year}", line_dash="dot",
-                          line_color=GREEN, annotation_text=f"Payback ≈ Ano {pb_year}",
-                          annotation_font_color=GREEN)
+            fig1.add_shape(
+                type="line",
+                x0=pb_year, x1=pb_year, y0=0, y1=1,
+                xref="x", yref="paper",
+                line=dict(dash="dot", color=GREEN, width=2),
+            )
+            fig1.add_annotation(
+                x=pb_year, y=0.98,
+                xref="x", yref="paper",
+                text=f"Payback ≈ Ano {pb_year}",
+                showarrow=False, yanchor="top",
+                font=dict(color=GREEN, size=11),
+            )
         fig1.update_layout(
             title="Retorno Acumulado — 25 anos (R$)",
             yaxis_title="R$",
