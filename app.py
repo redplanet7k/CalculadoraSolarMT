@@ -248,20 +248,34 @@ section[data-testid="stSidebar"]{display:none!important;}
 .footer-brand{color:#fff;font-weight:600;font-size:15px;margin-bottom:4px;}
 
 /* ── Streamlit widgets dark ── */
+input, textarea {
+  background:#111e38!important;
+  color:#e8f0ff!important;
+  caret-color:#e8f0ff!important;
+}
 div[data-testid="stNumberInput"] input,
 div[data-testid="stTextInput"] input{
-  background:rgba(255,255,255,0.06)!important;
-  border:1px solid rgba(255,255,255,0.09)!important;
+  background:#111e38!important;
+  border:1px solid rgba(255,255,255,0.15)!important;
   border-radius:8px!important;
-  color:var(--text)!important;
+  color:#e8f0ff!important;
   font-family:'Sora',sans-serif!important;
+  font-size:14px!important;
+  -webkit-text-fill-color:#e8f0ff!important;
 }
-div[data-testid="stNumberInput"] input:focus{border-color:var(--amber)!important;}
+div[data-testid="stNumberInput"] input:focus,
+div[data-testid="stTextInput"] input:focus{
+  border-color:var(--amber)!important;
+  box-shadow:0 0 0 2px rgba(245,158,11,0.2)!important;
+}
 div[data-testid="stSelectbox"] div[data-baseweb="select"]>div{
-  background:rgba(255,255,255,0.06)!important;
-  border:1px solid rgba(255,255,255,0.09)!important;
+  background:#111e38!important;
+  border:1px solid rgba(255,255,255,0.15)!important;
   border-radius:8px!important;
-  color:var(--text)!important;
+  color:#e8f0ff!important;
+}
+div[data-testid="stSelectbox"] div[data-baseweb="select"] *{
+  color:#e8f0ff!important;
 }
 label[data-testid="stWidgetLabel"] p{
   font-size:11px!important;font-weight:600!important;
@@ -269,6 +283,10 @@ label[data-testid="stWidgetLabel"] p{
   letter-spacing:.07em!important;
 }
 div[data-testid="stSlider"] p{color:var(--muted)!important;}
+/* Garante que o placeholder fique visível */
+div[data-testid="stNumberInput"] input::placeholder{
+  color:rgba(255,255,255,0.35)!important;
+}
 div[data-testid="stButton"]>button{
   border-radius:8px!important;
   font-family:'Sora',sans-serif!important;
@@ -647,181 +665,308 @@ elif st.session_state.step == 3:
     # ══════════════════════════════════════════════════════════════
     st.markdown('<div class="card-h" style="margin:24px 0 14px;font-size:15px;font-weight:600;color:#7a90b8;">📊 Análise Visual</div>', unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Retorno Acumulado", "🥧 Distribuição do Custo",
-                                       "☀️ Geração vs Consumo", "🔬 Análise Técnica"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "☀️ Geração vs Consumo",
+        "💸 Fluxo de Caixa",
+        "🔬 Física do Sistema",
+        "📊 Estatística",
+        "🌿 Ambiental",
+    ])
 
-    # ── Chart 1: Retorno Acumulado ────────────────────────────────
+    # ── Tab 1: Geração vs Consumo ─────────────────────────────────
     with tab1:
-        anos_l = ["Ano 0"] + [f"Ano {t}" for t in range(1, LIFE+1)]
-        acum_ret = [-custo]
-        acum = -custo
-        for t in range(1, LIFE+1):
-            acum += eco_ano * (1+INF)**(t-1)
-            acum_ret.append(round(acum))
+        from data import IRRADIANCIA_MENSAL as _irr_map
+        from calculations import calcular_geracao_mensal as _calc_ger
+        import financial as fin2, data as dados2
+        dados2.TARIFA_ENERGIA_KWH = tarifa; dados2.INFLACAO_ENERGIA_AA = inflacao; dados2.TAXA_DESCONTO = taxa_desc
+        fin2.TARIFA_ENERGIA_KWH = tarifa; fin2.INFLACAO_ENERGIA_AA = inflacao; fin2.TAXA_DESCONTO = taxa_desc
+        from calculations import calcular_potencia_sistema as _cps
+        _pot = _cps(consumo)
+        _ger = _calc_ger(_pot["potencia_real_kWp"])
+        _eco = economia_mensal_ano1(_ger["geracao_kwh"], consumo)
 
-        fig1 = go.Figure()
-        fig1.add_trace(go.Scatter(
-            x=anos_l, y=acum_ret,
-            mode="lines", name="Retorno Acumulado",
-            line=dict(color=AMBER, width=2.5),
-            fill="tozeroy",
-            fillcolor="rgba(245,158,11,0.08)",
+        ger_vals = [_ger["geracao_kwh"][m] for m in MESES]
+        ic_lo    = [_ger["ic_lower"][m] for m in MESES]
+        ic_hi    = [_ger["ic_upper"][m] for m in MESES]
+
+        fig_t1 = go.Figure()
+        fig_t1.add_trace(go.Scatter(
+            x=MESES + MESES[::-1], y=ic_hi + ic_lo[::-1],
+            fill="toself", fillcolor="rgba(245,158,11,0.12)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="IC 95% (Estatística)", hoverinfo="skip",
         ))
-        fig1.add_trace(go.Scatter(
-            x=anos_l, y=[0]*(LIFE+1),
-            mode="lines", name="Zero",
-            line=dict(color="rgba(255,255,255,0.15)", dash="dash", width=1),
-            showlegend=False,
-        ))
-        # Payback marker — add_shape evita erro com eixo categórico
-        pb_year = round(payback)
-        if 1 <= pb_year <= LIFE:
-            fig1.add_shape(
-                type="line",
-                x0=pb_year, x1=pb_year, y0=0, y1=1,
-                xref="x", yref="paper",
-                line=dict(dash="dot", color=GREEN, width=2),
-            )
-            fig1.add_annotation(
-                x=pb_year, y=0.98,
-                xref="x", yref="paper",
-                text=f"Payback ≈ Ano {pb_year}",
-                showarrow=False, yanchor="top",
-                font=dict(color=GREEN, size=11),
-            )
-        fig1.update_layout(
-            title="Retorno Acumulado — 25 anos (R$)",
-            yaxis_title="R$",
-            showlegend=False,
-        )
-        theme(fig1, height=280)
-        st.plotly_chart(fig1, use_container_width=True)
-
-        # Tabela resumo do fluxo (anos selecionados)
-        check_anos = [1,3,5,8,10,12,15,20,25]
-        df_ret = pd.DataFrame({
-            "Ano": [f"Ano {a}" for a in check_anos],
-            "Retorno Acum. (R$)": [f"R$ {acum_ret[a]:,.0f}" for a in check_anos],
-            "Status": ["✅ Positivo" if acum_ret[a] >= 0 else "🔴 Negativo" for a in check_anos],
-        })
-        st.dataframe(df_ret, use_container_width=True, hide_index=True)
-
-    # ── Chart 2: Donut custo ──────────────────────────────────────
-    with tab2:
-        labels_pie = ["Equipamentos 60%", "Projeto/Instalação 25%", "Mão de obra 15%"]
-        values_pie = [custo*0.60, custo*0.25, custo*0.15]
-        fig2 = go.Figure(go.Pie(
-            labels=labels_pie, values=values_pie, hole=0.55,
-            marker_colors=[AMBER, BLUE, GREEN],
-            textfont=dict(color=TEXT, size=11),
-        ))
-        fig2.update_layout(
-            title="Distribuição do Custo do Sistema",
-            legend=dict(orientation="h", y=-0.15, font=dict(color=MUTED)),
-        )
-        theme(fig2, height=300)
-        st.plotly_chart(fig2, use_container_width=True)
-
-        df_custo = pd.DataFrame({
-            "Componente": labels_pie,
-            "Valor (R$)": [f"R$ {v:,.0f}" for v in values_pie],
-            "Proporção": ["60%", "25%", "15%"],
-        })
-        st.dataframe(df_custo, use_container_width=True, hide_index=True)
-
-    # ── Chart 3: Geração mensal vs consumo ───────────────────────
-    with tab3:
-        ger_meses = [round(ger_mes * s) for s in SAZON]
-        fig3 = go.Figure()
-        fig3.add_trace(go.Bar(
-            x=MESES_CURTOS, y=ger_meses,
-            name="Geração Est.", marker_color="rgba(245,158,11,0.75)",
+        fig_t1.add_trace(go.Bar(
+            x=MESES, y=ger_vals, name="Geração Estimada",
+            marker_color="rgba(245,158,11,0.75)",
             marker_line_color=AMBER, marker_line_width=1,
         ))
-        fig3.add_trace(go.Bar(
-            x=MESES_CURTOS, y=[consumo]*12,
-            name="Consumo", marker_color="rgba(96,165,250,0.45)",
-            marker_line_color=BLUE, marker_line_width=1,
+        fig_t1.add_trace(go.Scatter(
+            x=MESES, y=[consumo]*12, name="Consumo Mensal",
+            line=dict(color="#f87171", width=2.5, dash="dash"), mode="lines",
         ))
-        fig3.add_trace(go.Scatter(
-            x=MESES_CURTOS, y=ger_meses,
-            mode="lines+markers",
-            line=dict(color=AMBER, width=2),
-            marker=dict(size=6, color=AMBER),
-            name="Geração (curva)", showlegend=False,
+        fig_t1.add_trace(go.Scatter(
+            x=MESES, y=ger_vals, name="Geração (linha)",
+            line=dict(color=AMBER, width=2.5),
+            mode="lines+markers", marker=dict(size=7, color=AMBER),
         ))
-        fig3.update_layout(
-            title="Geração Mensal Estimada vs Consumo (kWh)",
-            barmode="group", yaxis_title="kWh",
-            legend=dict(orientation="h", y=-0.22),
+        fig_t1.update_layout(
+            title="Geração Estimada vs Consumo Mensal (kWh)",
+            barmode="overlay", yaxis_title="kWh",
+            legend=dict(orientation="h", y=-0.28),
         )
-        theme(fig3, height=280)
-        st.plotly_chart(fig3, use_container_width=True)
+        theme(fig_t1, height=340)
+        st.plotly_chart(fig_t1, use_container_width=True)
 
-        irr_vals = list(IRRADIANCIA_MENSAL.values())
+        import pandas as pd
         df_ger = pd.DataFrame({
-            "Mês": MESES_CURTOS,
-            "HSP (kWh/m²/dia)": irr_vals,
-            "Fator sazonal": SAZON,
-            "Geração Est. (kWh)": ger_meses,
-            "Consumo (kWh)": [consumo]*12,
-            "Saldo (kWh)": [g - consumo for g in ger_meses],
+            "Mês":            MESES,
+            "Geração (kWh)":  [_ger["geracao_kwh"][m] for m in MESES],
+            "IC Inf. 95%":    [_ger["ic_lower"][m] for m in MESES],
+            "IC Sup. 95%":    [_ger["ic_upper"][m] for m in MESES],
+            "Consumo (kWh)":  [consumo]*12,
+            "Saldo (kWh)":    [round(_ger["geracao_kwh"][m]-consumo,1) for m in MESES],
+            "Economia (R$)":  [_eco[m] for m in MESES],
         })
         st.dataframe(df_ger, use_container_width=True, hide_index=True)
 
-    # ── Chart 4: Análise técnica ──────────────────────────────────
-    with tab4:
-        ang = angulo_otimo()
-        per = resumo_perdas()
+    # ── Tab 2: Fluxo de Caixa ─────────────────────────────────────
+    with tab2:
+        import financial as _fin
+        _fin.TARIFA_ENERGIA_KWH = tarifa; _fin.INFLACAO_ENERGIA_AA = inflacao; _fin.TAXA_DESCONTO = taxa_desc
+        from calculations import calcular_potencia_sistema as _cps2
+        _pot2 = _cps2(consumo)
+        from calculations import calcular_geracao_mensal as _cg2
+        _ger2 = _cg2(_pot2["potencia_real_kWp"])
+        _inv2 = calcular_investimento(_pot2["potencia_real_kWp"])
+        _fc2  = calcular_fluxo_caixa(_ger2["media_anual"], consumo, _inv2["custo_total"])
+        _pb2  = calcular_payback(_fc2["acumulado"], _fc2["fluxo_descontado"], _inv2["custo_total"])
+        _vpl2 = calcular_vpl(_fc2["fluxo_descontado"], _inv2["custo_total"])
+        _tir2 = calcular_tir(_fc2["fluxo_liquido"], _inv2["custo_total"])
 
-        c4a, c4b = st.columns(2)
-        with c4a:
-            # Ângulo ótimo
-            fig_ang = go.Figure(go.Scatter(
-                x=ang["betas"], y=ang["irradiancias"],
-                mode="lines", line=dict(color=AMBER, width=2.5),
-                fill="tozeroy", fillcolor="rgba(245,158,11,0.08)",
+        anos_l = [f"Ano {a}" for a in _fc2["anos"]]
+
+        fig_t2 = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=["Fluxo de Caixa Líquido Anual (R$)", "Fluxo Acumulado — Payback (R$)"],
+            vertical_spacing=0.14,
+        )
+        cores_fl = [GREEN if v >= 0 else "#f87171" for v in _fc2["fluxo_liquido"]]
+        fig_t2.add_trace(go.Bar(x=anos_l, y=_fc2["fluxo_liquido"],
+                                marker_color=cores_fl, name="Fluxo Líquido"), row=1, col=1)
+        cores_ac = [GREEN if v >= 0 else "#f87171" for v in _fc2["acumulado"]]
+        fig_t2.add_trace(go.Scatter(x=anos_l, y=_fc2["acumulado"],
+                                    mode="lines+markers",
+                                    line=dict(color=AMBER, width=3),
+                                    marker=dict(color=cores_ac, size=6),
+                                    name="Acumulado"), row=2, col=1)
+        # Linha zero (add_shape — compatível com eixo categórico)
+        fig_t2.add_shape(type="line", x0=0, x1=1, y0=0, y1=0,
+                         xref="x2 domain", yref="y2",
+                         line=dict(dash="dash", color="#f87171", width=1.5))
+        fig_t2.add_annotation(x=0.01, y=0, xref="x2 domain", yref="y2",
+                              text="Ponto de Equilíbrio", showarrow=False,
+                              xanchor="left", yanchor="bottom",
+                              font=dict(color="#f87171", size=10))
+        # Payback marker
+        if _pb2["payback_simples_anos"]:
+            pb_idx = _pb2["payback_simples_anos"] - 1
+            fig_t2.add_shape(type="line", x0=pb_idx, x1=pb_idx, y0=0, y1=1,
+                             xref="x2", yref="y2 domain",
+                             line=dict(dash="dot", color=AMBER, width=2))
+            fig_t2.add_annotation(x=pb_idx, y=1, xref="x2", yref="y2 domain",
+                                  text=f"Payback: Ano {_pb2['payback_simples_anos']}",
+                                  showarrow=False, yanchor="bottom",
+                                  font=dict(color=AMBER, size=11))
+        fig_t2.update_layout(height=560, showlegend=True)
+        theme(fig_t2, height=560)
+        st.plotly_chart(fig_t2, use_container_width=True)
+
+        col_fa, col_fb = st.columns(2)
+        with col_fa:
+            labels_pie2 = ["Módulos 45%", "Inversor 20%", "Estrutura 10%", "Instalação 15%", "Outros 10%"]
+            values_pie2 = [_inv2["custo_modulos"], _inv2["custo_inversor"],
+                           _inv2["custo_estrutura"], _inv2["custo_instalacao"], _inv2["custo_outros"]]
+            fig_pie2 = go.Figure(go.Pie(
+                labels=labels_pie2, values=values_pie2, hole=0.5,
+                marker_colors=[AMBER, BLUE, GREEN, "#c084fc", "#7a90b8"],
+                textfont=dict(color=TEXT, size=10),
             ))
-            fig_ang.add_vline(x=ang["angulo_otimo_graus"], line_dash="dash",
-                              line_color=GREEN,
-                              annotation_text=f"β*={ang['angulo_otimo_graus']}°",
-                              annotation_font_color=GREEN)
-            fig_ang.update_layout(title="Ângulo Ótimo de Inclinação (Cálculo III)",
-                                  xaxis_title="β (graus)", yaxis_title="kWh/m²/dia")
-            theme(fig_ang, height=260)
-            st.plotly_chart(fig_ang, use_container_width=True)
+            fig_pie2.update_layout(title="Composição do Investimento",
+                                   legend=dict(orientation="h", y=-0.2, font=dict(color=MUTED)))
+            theme(fig_pie2, height=280)
+            st.plotly_chart(fig_pie2, use_container_width=True)
+        with col_fb:
+            pb_d = _pb2["payback_descontado_anos"]
+            st.markdown(f"""
+| Indicador | Valor |
+|-----------|-------|
+| **VPL (25 anos)** | R$ {_vpl2['vpl']:,.0f} |
+| **TIR** | {_tir2}% a.a. |
+| **SELIC ref.** | {taxa_desc*100:.1f}% a.a. |
+| **Payback simples** | {_pb2['payback_simples_anos']} anos |
+| **Payback descontado** | {pb_d if pb_d else ">25"} anos |
+| **Custo total** | R$ {_inv2['custo_total']:,.0f} |
+| **Custo/kWp** | R$ {CUSTO_POR_KWP:,.0f} |
+""")
 
-        with c4b:
-            # Perdas do sistema
-            labels_p = [k for k in per if k != "Total"]
-            vals_p   = [per[k] for k in labels_p]
-            fig_per = go.Figure(go.Bar(
+    # ── Tab 3: Física do Sistema ──────────────────────────────────
+    with tab3:
+        from calculations import resumo_perdas as _rp, angulo_otimo as _ao, perda_por_temperatura as _pt
+        _per = _rp(); _ang = _ao()
+
+        st.markdown(f'<span style="background:#1a3a5c;color:#60a5fa;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;">Física III</span> &nbsp;Efeito Fotovoltaico · Temperatura · Otimização de Inclinação (Cálculo III)', unsafe_allow_html=True)
+        st.markdown("---")
+
+        col3a, col3b = st.columns(2)
+        with col3a:
+            st.markdown("**Diagrama de Perdas do Sistema (Sankey simplificado)**")
+            labels_p = [k for k in _per if k != "Total"]
+            vals_p   = [_per[k] for k in labels_p]
+            fig_per2 = go.Figure(go.Bar(
                 x=labels_p, y=vals_p,
                 marker_color=["rgba(248,113,113,0.8)"]*len(labels_p),
                 marker_line_color="#f87171", marker_line_width=1,
                 text=[f"{v}%" for v in vals_p], textposition="outside",
                 textfont=dict(color=MUTED),
             ))
-            fig_per.update_layout(title=f"Perdas do Sistema — Total {per['Total']}% (Física III)",
-                                  yaxis_title="Perda (%)")
-            theme(fig_per, height=260)
-            st.plotly_chart(fig_per, use_container_width=True)
+            fig_per2.update_layout(title=f"Perdas do Sistema (Total: {_per['Total']}%)", yaxis_title="Perda (%)")
+            theme(fig_per2, height=300)
+            st.plotly_chart(fig_per2, use_container_width=True)
+            st.markdown("**Equação do Performance Ratio (PR):**")
+            st.latex(r"PR = 1 - (\eta_{inv}+\eta_{cab}+\eta_{som}+\eta_{suj}+lpha_T\Delta T)")
+            st.latex(rf"PR = 1 - ({_per['Total']/100:.4f}) = {1-_per['Total']/100:.4f}")
 
-        # Temperatura
-        temps = np.arange(25, 75, 1)
-        perda_t = [perda_por_temperatura(float(t)) for t in temps]
-        fig_tmp = go.Figure(go.Scatter(
-            x=temps, y=perda_t, mode="lines",
+        with col3b:
+            st.markdown("**Curva de Irradiância vs Ângulo de Inclinação (Cálculo III)**")
+            fig_ang2 = go.Figure()
+            fig_ang2.add_trace(go.Scatter(
+                x=_ang["betas"], y=_ang["irradiancias"],
+                mode="lines", line=dict(color=AMBER, width=2.5),
+                fill="tozeroy", fillcolor="rgba(245,158,11,0.08)",
+            ))
+            fig_ang2.add_vline(x=_ang["angulo_otimo_graus"], line_dash="dash",
+                               line_color=GREEN,
+                               annotation_text=f"β* = {_ang['angulo_otimo_graus']}°",
+                               annotation_font_color=GREEN)
+            fig_ang2.update_layout(title="Otimização do Ângulo de Inclinação",
+                                   xaxis_title="Ângulo β (graus)",
+                                   yaxis_title="Irradiância média (kWh/m²/dia)")
+            theme(fig_ang2, height=300)
+            st.plotly_chart(fig_ang2, use_container_width=True)
+            st.markdown("**Equação de otimização (Cálculo III):**")
+            st.latex(r"I(eta,\gamma) = I_{horiz} \cdot [\cos(arphi-eta)\cdot\cos(\gamma)]")
+            st.latex(rf"eta^* = {_ang['angulo_otimo_graus']:.1f}° pprox |arphi| = {abs(LATITUDE)}°")
+
+        st.markdown("---")
+        st.markdown("**Perda por Temperatura (Física III — Coeficiente de Temperatura)**")
+        _temps = np.arange(25, 80, 1)
+        _perda_t = [_pt(float(t)) for t in _temps]
+        fig_tmp2 = go.Figure(go.Scatter(
+            x=_temps, y=_perda_t, mode="lines",
             line=dict(color="#f87171", width=2),
             fill="tozeroy", fillcolor="rgba(248,113,113,0.08)",
         ))
-        fig_tmp.add_vline(x=TEMP_OPERACAO_LOCAL, line_dash="dash", line_color=AMBER,
-                          annotation_text=f"T_op={TEMP_OPERACAO_LOCAL}°C → {per['Temperatura']}% perda",
-                          annotation_font_color=AMBER)
-        fig_tmp.update_layout(title="Perda de Potência por Temperatura — αT = −0,35%/°C (Física III)",
-                              xaxis_title="Temperatura (°C)", yaxis_title="Perda (%)")
-        theme(fig_tmp, height=240)
-        st.plotly_chart(fig_tmp, use_container_width=True)
+        fig_tmp2.add_vline(x=TEMP_OPERACAO_LOCAL, line_dash="dash", line_color=AMBER,
+                           annotation_text=f"T_op={TEMP_OPERACAO_LOCAL}°C ({_per['Temperatura']}% perda)",
+                           annotation_font_color=AMBER)
+        fig_tmp2.update_layout(title="Perda de Potência por Temperatura (αT = −0,35%/°C)",
+                               xaxis_title="Temperatura de Operação (°C)", yaxis_title="Perda (%)")
+        theme(fig_tmp2, height=260)
+        st.plotly_chart(fig_tmp2, use_container_width=True)
+        st.latex(r"\Delta P = lpha_T \cdot (T_{op} - T_{STC}) = -0{,}0035 \cdot (T_{op} - 25°C)")
+
+    # ── Tab 4: Estatística ────────────────────────────────────────
+    with tab4:
+        from data import IRRADIANCIA_MENSAL as _irr_full
+        st.markdown('<span style="background:#1a3a2a;color:#10b981;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;">Probabilidade e Estatística</span> &nbsp;Médias Históricas · IC 95% · Distribuição de Geração', unsafe_allow_html=True)
+        st.markdown("---")
+
+        _irr_vals  = list(_irr_full.values())
+        _media_irr = np.mean(_irr_vals)
+        _desvio    = np.std(_irr_vals)
+
+        ms1, ms2, ms3 = st.columns(3)
+        ms1.metric("HSP Médio Anual",    f"{_media_irr:.2f} kWh/m²/dia")
+        ms2.metric("Desvio Padrão",      f"{_desvio:.2f} kWh/m²/dia")
+        ms3.metric("Coef. de Variação",  f"{_desvio/_media_irr*100:.1f}%")
+
+        fig_stat2 = go.Figure()
+        fig_stat2.add_trace(go.Bar(x=MESES, y=_irr_vals, name="HSP Médio",
+                                   marker_color="rgba(245,158,11,0.75)",
+                                   marker_line_color=AMBER, marker_line_width=1))
+        fig_stat2.add_hline(y=_media_irr, line_dash="dash", line_color=GREEN,
+                            annotation_text=f"Média = {_media_irr:.2f} kWh/m²/dia",
+                            annotation_font_color=GREEN)
+        fig_stat2.add_hline(y=_media_irr+_desvio, line_dash="dot", line_color=MUTED,
+                            annotation_text="+1σ", annotation_font_color=MUTED)
+        fig_stat2.add_hline(y=_media_irr-_desvio, line_dash="dot", line_color=MUTED,
+                            annotation_text="-1σ", annotation_font_color=MUTED)
+        fig_stat2.update_layout(title="Irradiância Solar Mensal — Lucas do Rio Verde/MT (CRESESB)",
+                                yaxis_title="HSP (kWh/m²/dia)")
+        theme(fig_stat2, height=340)
+        st.plotly_chart(fig_stat2, use_container_width=True)
+
+        # Distribuição normal (TCL)
+        st.markdown("**Distribuição da Geração Anual — Teorema Central do Limite (n=20 anos)**")
+        from calculations import calcular_potencia_sistema as _cps3, calcular_geracao_mensal as _cg3
+        _pot3 = _cps3(consumo)
+        _ger3 = _cg3(_pot3["potencia_real_kWp"])
+        _med_ag = _ger3["media_anual"]
+        _sig_ag = _med_ag * 0.06
+        _x_dist = np.linspace(_med_ag - 3*_sig_ag, _med_ag + 3*_sig_ag, 300)
+        _y_dist = (1/(_sig_ag*np.sqrt(2*np.pi))) * np.exp(-0.5*((_x_dist-_med_ag)/_sig_ag)**2)
+        _lo95 = _med_ag - 1.96*_sig_ag; _hi95 = _med_ag + 1.96*_sig_ag
+        fig_dist2 = go.Figure()
+        fig_dist2.add_trace(go.Scatter(x=_x_dist, y=_y_dist, mode="lines",
+                                       line=dict(color=AMBER, width=2),
+                                       fill="tozeroy", fillcolor="rgba(245,158,11,0.12)"))
+        fig_dist2.add_vrect(x0=_lo95, x1=_hi95, fillcolor="rgba(16,185,129,0.08)",
+                            layer="below", line_width=0, annotation_text="IC 95%",
+                            annotation_font_color=GREEN)
+        fig_dist2.add_vline(x=_med_ag, line_dash="dash", line_color=GREEN,
+                            annotation_text=f"μ = {_med_ag:.0f} kWh/ano",
+                            annotation_font_color=GREEN)
+        fig_dist2.update_layout(title=f"Distribuição Anual — IC 95%: [{_lo95:.0f}, {_hi95:.0f}] kWh",
+                                xaxis_title="kWh/ano", yaxis_title="Densidade de Probabilidade")
+        theme(fig_dist2, height=280)
+        st.plotly_chart(fig_dist2, use_container_width=True)
+        st.latex(r"ar{X} \pm 1{,}96 \cdot rac{\sigma}{\sqrt{n}} \quad 	ext{(Teorema Central do Limite)}")
+        st.markdown(f"**Intervalo de Confiança 95%:** [{_lo95:,.0f} ; {_hi95:,.0f}] kWh/ano")
+
+    # ── Tab 5: Ambiental ──────────────────────────────────────────
+    with tab5:
+        from financial import co2_evitado as _co2
+        from calculations import calcular_potencia_sistema as _cps4, calcular_geracao_mensal as _cg4
+        _pot4 = _cps4(consumo)
+        _ger4 = _cg4(_pot4["potencia_real_kWp"])
+        _co2d = _co2(_ger4["media_anual"])
+
+        ca, cb, cc = st.columns(3)
+        ca.metric("CO₂ evitado/ano",      f"{_co2d['kg_co2_ano']:,.0f} kg")
+        cb.metric("CO₂ evitado (25 anos)", f"{_co2d['ton_co2_25anos']:.1f} t")
+        cc.metric("Equivalente em árvores",f"{_co2d['arvores_eq']:,} 🌳")
+
+        _anos25 = list(range(1, 26))
+        _co2_acum = [_co2d["kg_co2_ano"] * a / 1000 for a in _anos25]
+        fig_co2_2 = go.Figure(go.Scatter(
+            x=[f"Ano {a}" for a in _anos25], y=_co2_acum,
+            mode="lines+markers", line=dict(color=GREEN, width=3),
+            fill="tozeroy", fillcolor="rgba(16,185,129,0.1)",
+            marker=dict(size=5, color=GREEN),
+        ))
+        fig_co2_2.update_layout(title="CO₂ Evitado Acumulado ao Longo de 25 Anos (toneladas)",
+                                yaxis_title="CO₂ (t)")
+        theme(fig_co2_2, height=280)
+        st.plotly_chart(fig_co2_2, use_container_width=True)
+        st.markdown(f"""
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);
+                    border-radius:10px;padding:14px 18px;font-size:13px;color:#6ee7b7;margin-top:8px;">
+            🌱 Em 25 anos, este sistema evitará <b>{_co2d['ton_co2_25anos']:.1f} toneladas</b> de CO₂ —
+            equivalente ao plantio de aproximadamente <b>{_co2d['arvores_eq']:,} árvores</b>.<br>
+            Fator de emissão da rede elétrica brasileira: <b>0,094 tCO₂/MWh</b> (ONS 2023).
+        </div>
+        """, unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════
     # DISCIPLINAS — igual ao HTML
@@ -872,6 +1017,32 @@ elif st.session_state.step == 3:
             st.latex(r"IC_{95\%} = \bar{X} \pm 1{,}96 \cdot \frac{\sigma}{\sqrt{n}}")
 
     # ── Botões ────────────────────────────────────────────────────
+    # Fórmulas (Gestão do Conhecimento)
+    with st.expander("📐 Fórmulas e Fundamentação Teórica — Gestão do Conhecimento"):
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            st.markdown("**⚡ Física III**")
+            st.latex(r"G_{mes} = HSP \cdot P_{kWp} \cdot PR \cdot 30")
+            st.latex(r"PR = 1 - (\eta_{inv}+\eta_{cab}+\eta_{som}+\eta_{suj}+\alpha_T\Delta T)")
+            st.markdown("**∫ Cálculo III**")
+            st.latex(r"\beta^* = \arg\max_\beta I(\beta,\gamma) \approx |\varphi|")
+        with col_e2:
+            st.markdown("**💰 Matemática Financeira**")
+            st.latex(r"VPL = -C_0 + \sum_{t=1}^{25}\frac{FC_t}{(1+i)^t}")
+            st.latex(r"PMT = PV \cdot \frac{r(1+r)^n}{(1+r)^n - 1}")
+            st.markdown("**📊 Probabilidade e Estatística**")
+            st.latex(r"IC_{95\%} = \bar{X} \pm 1{,}96 \cdot \frac{\sigma}{\sqrt{n}}")
+
+    # Nota de rodapé do resultado (igual ao HTML)
+    st.markdown("""
+    <div style="text-align:center;font-size:12px;color:#3d5280;
+                margin-top:8px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.09);">
+      Sistema SolarMT — Projeto de Extensão · Seminário Integrador IV · UFMT ·
+      Bacharelado em Ciência e Tecnologia · 2026<br>
+      Dados de irradiação: INMET / CRESESB · Licença: GNU GPL v3.0 (Software Livre)
+    </div>
+    """, unsafe_allow_html=True)
+
     st.markdown("---")
     br1, br2 = st.columns([1,1])
     with br1:
@@ -880,12 +1051,15 @@ elif st.session_state.step == 3:
             st.session_state.form = {}
             st.rerun()
     with br2:
+        # Botão imprimir/PDF com JavaScript (igual ao HTML original)
         st.markdown("""
-        <div style="text-align:right;padding-top:6px;">
-          <small style="color:#3d5280;">
-            💡 Use Ctrl+P ou o menu do navegador para imprimir / salvar em PDF
-          </small>
-        </div>
+        <button onclick="window.print()"
+            style="width:100%;padding:11px 26px;background:#f59e0b;color:#08101e;
+                   border:none;border-radius:8px;font-family:'Sora',sans-serif;
+                   font-size:14px;font-weight:600;cursor:pointer;
+                   display:flex;align-items:center;justify-content:center;gap:8px;">
+            🖨️ Imprimir / Salvar PDF
+        </button>
         """, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════
