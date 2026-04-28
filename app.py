@@ -1050,7 +1050,7 @@ elif st.session_state.step == 3:
 
     import streamlit.components.v1 as components
 
-    _share_url  = "https://calculadorasolarmt.streamlit.app"
+    _share_url  = "https://calculadorasolarmatogro.streamlit.app"
     _share_text = (
         f"Simulei meu sistema solar com a SolarMT e o resultado foi incrível! "
         f"Sistema de {kwp:.1f} kWp, retorno em {payback} anos e TIR de {tir_pct}% a.a. "
