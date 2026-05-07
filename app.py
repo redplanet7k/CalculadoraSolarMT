@@ -1178,7 +1178,7 @@ st.markdown("""
   <div class="footer-brand">SolarMT — Lucas do Rio Verde/MT</div>
   <p>
     Criado por
-    <a href="https://www.instagram.com/_atlaskennedydc" target="_blank">Atlas Kennedy</a>
+    <a href="https://www.instagram.com/srkennedydc/" target="_blank">Atlas Kennedy</a>
     — Graduando em Ciência e Tecnologia ·
     <strong style="color:#e8f0ff;">UFMT — Universidade Federal de Mato Grosso</strong>
   </p>
