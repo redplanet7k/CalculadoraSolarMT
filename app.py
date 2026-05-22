@@ -1,7 +1,7 @@
 """
 app.py — SolarMT | Calculadora de Viabilidade Solar Fotovoltaica
 Design baseado no protótipo HTML do projeto SolarMT — BCT/UFMT
-Criado por Atlas Kennedy — Graduando em Ciência e Tecnologia · UFMT
+Criado por Atlas Kennedy e Co-autoria de Angélica Santos— Graduandos em Ciência e Tecnologia · UFMT
 """
 
 import streamlit as st
@@ -1178,8 +1178,9 @@ st.markdown("""
   <div class="footer-brand">SolarMT — Lucas do Rio Verde/MT</div>
   <p>
     Criado por
-    <a href="https://www.instagram.com/srkennedydc/" target="_blank">Atlas Kennedy</a>
-    — Graduando em Ciência e Tecnologia ·
+    <a href="https://www.instagram.com/srkennedydc/" target="_blank">Atlas Kennedy</a> & co-autorado por 
+        <a href='https://www.instagram.com/angelicasantos.r/' target='_blank' style='color: #ffc107; text-decoration: none;'>Angélica Santos</a></p>
+    — Graduandos em Ciência e Tecnologia ·
     <strong style="color:#e8f0ff;">UFMT — Universidade Federal de Mato Grosso</strong>
   </p>
   <p style="margin-top:4px;opacity:.7;font-size:11px;">
