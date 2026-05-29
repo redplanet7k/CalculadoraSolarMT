@@ -1179,7 +1179,8 @@ st.markdown("""
   <p>
     Criado por
     <a href="https://www.instagram.com/srkennedydc/" target="_blank">Atlas Kennedy</a> & co-autorado por 
-        <a href='https://www.instagram.com/angelicasantos.r/' target='_blank' style='color: #ffc107; text-decoration: none;'>Angélica Santos</a></p>
+        <a href='https://www.instagram.com/angelicasantos.r/' target='_blank' style='color: #ffc107; text-decoration: none;'>Angélica Santos</a></p> &
+         <a href='https://www.instagram.com/' target='_blank' style='color: #ffc107; text-decoration: none;'>Viviane Santos</a></p>
     — Graduandos em Ciência e Tecnologia ·
     <strong style="color:#e8f0ff;">UFMT — Universidade Federal de Mato Grosso</strong>
   </p>
