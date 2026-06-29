@@ -118,6 +118,25 @@ section[data-testid="stSidebar"]{display:none!important;}
 .ibox-r{background:var(--rbg);border:1px solid var(--rbd);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--red);margin-bottom:12px;}
 .atlas-tag{display:inline-block;background:var(--gbg);border:1px solid var(--gbd);color:var(--green);font-size:10px;border-radius:20px;padding:2px 10px;margin-left:6px;vertical-align:middle;font-weight:600;}
 
+/* ── Cartão hero de resultado ── */
+.result-hero{background:linear-gradient(135deg,#0d3d6e 0%,#1d6fbf 100%);border-radius:18px;padding:28px 24px 22px;margin-bottom:18px;color:#fff;}
+.result-hero-title{font-size:12px;text-transform:uppercase;letter-spacing:.10em;opacity:.75;margin-bottom:14px;font-weight:600;}
+.result-hero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.rhc{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:12px;padding:14px 12px;text-align:center;}
+.rhc-icon{font-size:22px;margin-bottom:6px;}
+.rhc-val{font-size:22px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:3px;}
+.rhc-label{font-size:11px;color:rgba(255,255,255,0.75);line-height:1.4;}
+.rhc.highlight{background:rgba(22,163,74,0.30);border-color:rgba(134,239,172,0.50);}
+@media(max-width:540px){.result-hero-grid{grid-template-columns:1fr!important;}}
+
+/* ── Tooltip explicativo ── */
+.explain{display:inline-block;background:rgba(29,111,191,0.08);border:1px solid var(--bbd);
+  border-radius:6px;padding:2px 8px;font-size:10px;color:var(--blue);margin-left:6px;vertical-align:middle;cursor:help;}
+
+/* ── Label humanizado de seção ── */
+.section-label{font-size:13px;font-weight:700;color:var(--blued);margin:18px 0 8px;display:flex;align-items:center;gap:8px;}
+.section-label span{font-weight:400;color:var(--muted);font-size:12px;}
+
 .footer{margin-top:36px;padding:20px 0 14px;border-top:2px solid var(--cb);text-align:center;color:var(--muted);font-size:12px;line-height:1.9;}
 .footer a{color:var(--blue);text-decoration:none;font-weight:600;}
 .footer a:hover{text-decoration:underline;}
@@ -371,28 +390,30 @@ if st.session_state.step == 1:
 # ══════════════════════════════════════════════════════════════════
 elif st.session_state.step == 2:
     st.markdown('<div class="card"><div class="card-h">🏠 Dados de Instalação</div>'
-                '<div class="card-sub">Configure os parâmetros técnicos e financeiros do projeto.</div>',
+                '<div class="card-sub">Preencha o que souber — os campos técnicos já têm valores sugeridos para você.</div>',
                 unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
     with c1:
-        area = st.number_input("Área Disponível no Telhado (m²)", 0, 50000, 0, 5,
-            help="Cada painel ocupa ≈ 2,56 m². Deixe 0 para calcular automaticamente.")
+        area = st.number_input("Área do telhado disponível (m²)",
+            0, 50000, 0, 5,
+            help="Cada painel ocupa cerca de 2,56 m² (tamanho de uma porta). Deixe 0 se não souber — calculamos automaticamente.")
     with c2:
-        orcamento = st.number_input("Orçamento Máximo (R$) — Opcional", 0, 9999999, 0, 1000,
-            help="Deixe 0 para calcular o sistema ideal sem limite financeiro.")
+        orcamento = st.number_input("Limite de orçamento — Opcional (R$)",
+            0, 9999999, 0, 1000,
+            help="Se tiver um valor máximo em mente, coloque aqui. Deixe 0 para calcular o sistema ideal.")
 
-    # Fator Derate — exigência da tutora
+    # Fator Derate — agora com linguagem simplificada
     st.markdown('<div style="background:#f0f7ff;border:1.5px solid #a8c8ee;border-radius:10px;padding:14px 16px;margin-bottom:14px">',
                 unsafe_allow_html=True)
-    derate = st.slider("⚙️ Fator Derate — Eficiência Real do Sistema (%)",
+    derate = st.slider(
+        "⚙️ Eficiência real do sistema (%)",
         75, 85, 80, 1,
-        help="Perdas combinadas: térmicas + sujeira + cabeamento + inversor + sombreamento. "
-             "Atlas Brasileiro recomenda 80% para sistemas bem instalados (Fig.52, p.57).")
+        help="Todo sistema perde um pouco de energia por calor, sujeira nos painéis e fiação. "
+             "80% é o valor recomendado para sistemas bem instalados no Mato Grosso.")
     st.markdown(f"""<div style="font-size:11px;color:#5a7099;margin-top:4px">
-      <strong>{derate}%</strong> →
-      Temperatura {round(abs(-0.0035)*(45-25)*100,1)}% +
-      Sujeira 2,0% + Cabeamento 1,5% + Inversor 3,0% + Sombreamento 2,5%
+      Com <strong>{derate}%</strong> de eficiência, seu sistema vai funcionar em {derate}% da capacidade máxima —
+      isso é normal e já está considerado nos cálculos.
     </div></div>""", unsafe_allow_html=True)
 
     c3, c4 = st.columns(2)
@@ -492,59 +513,110 @@ elif st.session_state.step == 3:
         saldo_val = round(eco_mes - pmt_val)
 
     # ── Geo card resultado ───────────────────────────────────────────────
-    hs="S" if lat_c<0 else "N"; hm="O" if lon_c<0 else "L"
-    angot = round(abs(lat_c),1)
-    st.markdown(f"""
-    <div class="geo-card">
-      <div class="geo-item"><span class="geo-label">📍 Município</span>
-        <span class="geo-value" style="font-size:14px">{f["cidade"]}</span>
-        <span class="geo-sub">{f["tipo"]}</span></div>
-      <div class="geo-item"><span class="geo-label">Lat / Lon</span>
-        <span class="geo-value" style="font-size:13px">{abs(lat_c):.2f}°{hs} · {abs(lon_c):.2f}°{hm}</span></div>
-      <div class="geo-item"><span class="geo-label">☀️ GHI Médio</span>
-        <span class="geo-value">{ghi_c:.2f}</span>
-        <span class="geo-sub">kWh/m²/dia</span></div>
-      <div class="geo-item"><span class="geo-label">⚙️ Derate</span>
-        <span class="geo-value">{PR*100:.0f}%</span></div>
-      <div class="geo-item"><span class="geo-label">📐 Ângulo Ótimo</span>
-        <span class="geo-value">{angot}°</span>
-        <span class="geo-sub">inclinação norte</span></div>
-      <div style="margin-left:auto"><span class="geo-badge">Atlas INPE 2017</span></div>
-    </div>""", unsafe_allow_html=True)
+    # (movido para dentro do expander de detalhes técnicos)
 
     if f["area"]>0 and area_nec>f["area"]:
-        st.markdown(f'<div class="ibox-r">⚠️ Sistema limitado pela área ({f["area"]} m²). Área ideal: {area_nec:.0f} m².</div>',
+        st.markdown(f'<div class="ibox-r">⚠️ Sistema limitado pela área disponível ({f["area"]} m²). Para cobrir 100% do consumo seriam necessários {area_nec:.0f} m².</div>',
                     unsafe_allow_html=True)
 
-    # ── Métricas ─────────────────────────────────────────────────────────
-    st.markdown(f"""
-    <div class="mg">
-      <div class="mc a"><div class="ml">Painéis</div><div class="mv">{n}</div><div class="mu">× 550 Wp monocristalino</div></div>
-      <div class="mc a"><div class="ml">Potência</div><div class="mv">{kwp:.2f} kWp</div><div class="mu">kilowatt-pico</div></div>
-      <div class="mc a"><div class="ml">Área Necessária</div><div class="mv">{area_nec:.0f} m²</div><div class="mu">telhado útil</div></div>
-    </div>
-    <div class="mg">
-      <div class="mc g"><div class="ml">Geração Anual</div><div class="mv">{ger_ano:,.0f}</div><div class="mu">kWh / ano</div></div>
-      <div class="mc g"><div class="ml">Cobertura</div><div class="mv">{cob}%</div><div class="mu">do consumo mensal</div></div>
-      <div class="mc g"><div class="ml">CO₂ Evitado</div><div class="mv">{co2["ton_co2_25anos"]:.1f} t</div><div class="mu">em 25 anos</div></div>
-    </div>
-    <div class="mg">
-      <div class="mc b"><div class="ml">Investimento</div><div class="mv" style="font-size:15px">R$ {inv["custo_total"]:,.0f}</div><div class="mu">R$ {inv["custo_por_kwp"]:,.0f}/kWp</div></div>
-      <div class="mc b"><div class="ml">Economia Mensal</div><div class="mv">R$ {eco_mes:,.0f}</div><div class="mu">média / mês</div></div>
-      <div class="mc b"><div class="ml">Payback Simples</div><div class="mv">{pb_s}</div><div class="mu">anos</div></div>
-    </div>""", unsafe_allow_html=True)
+    # ── 🎯 CARTÃO HERO — Resultado em destaque (linguagem simples) ──────────
+    pb_s_txt = f"{pb_s} anos" if isinstance(pb_s, int) else "mais de 25 anos"
+    cob_txt  = "✅ Total" if cob >= 100 else f"{cob}% do consumo"
+
+    # Comparação TIR com Selic (linguagem do usuário)
+    if tir >= 12: tir_compare = f"melhor que a Selic ({taxa_desc*100:.0f}% a.a.)"
+    elif tir >= 8: tir_compare = f"acima da poupança"
+    else: tir_compare = f"rentabilidade de {tir}% ao ano"
 
     st.markdown(f"""
-    <div class="tir-card">
-      <div style="font-size:30px">📈</div>
+    <div class="result-hero">
+      <div class="result-hero-title">☀️ Seu resultado — {f['cidade']}</div>
+      <div class="result-hero-grid">
+        <div class="rhc highlight">
+          <div class="rhc-icon">💰</div>
+          <div class="rhc-val">R$ {eco_mes:,.0f}</div>
+          <div class="rhc-label">economia<br>por mês na conta de luz</div>
+        </div>
+        <div class="rhc highlight">
+          <div class="rhc-icon">⏱️</div>
+          <div class="rhc-val">{pb_s_txt}</div>
+          <div class="rhc-label">para o sistema<br>se pagar sozinho</div>
+        </div>
+        <div class="rhc">
+          <div class="rhc-icon">🔆</div>
+          <div class="rhc-val">{n} painéis</div>
+          <div class="rhc-label">{kwp:.1f} kWp · cobre {cob_txt}</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:12px;opacity:.80;line-height:1.6">
+        💸 Investimento estimado: <strong>R$ {inv['custo_total']:,.0f}</strong>
+        &nbsp;·&nbsp; Retorno ao longo de 25 anos: <strong>R$ {sum(fc["economias"]):,.0f}</strong>
+        &nbsp;·&nbsp; Rentabilidade: <strong>{tir}% ao ano</strong> ({tir_compare})
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Detalhes técnicos (colapsável) ──────────────────────────────────────
+    with st.expander("🔍 Ver detalhes técnicos do sistema", expanded=False):
+        hs="S" if lat_c<0 else "N"; hm="O" if lon_c<0 else "L"
+        angot = round(abs(lat_c),1)
+        st.markdown(f"""
+        <div class="geo-card">
+          <div class="geo-item"><span class="geo-label">📍 Município</span>
+            <span class="geo-value" style="font-size:14px">{f["cidade"]}</span>
+            <span class="geo-sub">{f["tipo"]}</span></div>
+          <div class="geo-item"><span class="geo-label">Lat / Lon</span>
+            <span class="geo-value" style="font-size:13px">{abs(lat_c):.2f}°{hs} · {abs(lon_c):.2f}°{hm}</span></div>
+          <div class="geo-item"><span class="geo-label">☀️ GHI Médio</span>
+            <span class="geo-value">{ghi_c:.2f}</span>
+            <span class="geo-sub">kWh/m²/dia — irradiação solar local</span></div>
+          <div class="geo-item"><span class="geo-label">⚙️ Eficiência</span>
+            <span class="geo-value">{PR*100:.0f}%</span>
+            <span class="geo-sub">derate configurado</span></div>
+          <div class="geo-item"><span class="geo-label">📐 Inclinação Ideal</span>
+            <span class="geo-value">{angot}°</span>
+            <span class="geo-sub">dos painéis (voltados ao norte)</span></div>
+          <div style="margin-left:auto"><span class="geo-badge">Atlas INPE 2017</span></div>
+        </div>""", unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class="mg">
+          <div class="mc a"><div class="ml">Potência do sistema</div><div class="mv">{kwp:.2f} kWp</div><div class="mu">kilowatt-pico instalado</div></div>
+          <div class="mc a"><div class="ml">Área necessária</div><div class="mv">{area_nec:.0f} m²</div><div class="mu">no telhado</div></div>
+          <div class="mc a"><div class="ml">Geração anual</div><div class="mv">{ger_ano:,.0f} kWh</div><div class="mu">estimada por ano</div></div>
+        </div>
+        <div class="mg">
+          <div class="mc b"><div class="ml">VPL em 25 anos</div><div class="mv" style="font-size:15px">{vpl_fmt}</div><div class="mu">valor presente líquido</div></div>
+          <div class="mc b"><div class="ml">TIR</div><div class="mv">{tir}% a.a.</div><div class="mu">taxa interna de retorno</div></div>
+          <div class="mc b"><div class="ml">Payback descontado</div><div class="mv">{pb_d} anos</div><div class="mu">considerando inflação</div></div>
+        </div>""", unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class="tir-card">
+          <div style="font-size:30px">📈</div>
+          <div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:{MUTED};margin-bottom:3px">Rentabilidade do investimento (TIR)</div>
+            <div class="tir-val">{tir}% a.a.</div>
+          </div>
+          <div class="tir-msg">{tir_txt}<br>
+            <small>VPL 25 anos: <strong>{vpl_fmt}</strong> · Payback descontado: <strong>{pb_d} anos</strong> · Taxa de desconto: {taxa_desc*100:.1f}% a.a.</small>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── CO2 inline (sempre visível, simples) ────────────────────────────────
+    st.markdown(f"""
+    <div style="background:#dcfce7;border:1px solid #86efac;border-radius:12px;
+      padding:14px 18px;margin:10px 0 6px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="font-size:28px">🌿</div>
       <div>
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:{MUTED};margin-bottom:3px">TIR — Taxa Interna de Retorno</div>
-        <div class="tir-val">{tir}% a.a.</div>
+        <div style="font-size:14px;font-weight:700;color:#166534">Impacto ambiental positivo</div>
+        <div style="font-size:12px;color:#15803d;margin-top:3px">
+          Seu sistema vai deixar de emitir <strong>{co2['kg_co2_ano']:,.0f} kg de CO₂ por ano</strong>
+          — equivalente a plantar <strong>{co2['arvores_eq']:,} árvores</strong> ao longo de 25 anos.
+        </div>
       </div>
-      <div class="tir-msg">{tir_txt}<br>
-        <small>VPL 25 anos: <strong>{vpl_fmt}</strong> · Payback descontado: <strong>{pb_d} anos</strong> · SELIC: {taxa_desc*100:.1f}% a.a.</small>
-      </div>
-    </div>""", unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     if pmt_val is not None:
         sc = GREEN if saldo_val>=0 else RED
